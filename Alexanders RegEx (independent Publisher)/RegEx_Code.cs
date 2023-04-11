@@ -13,6 +13,8 @@ public class Script : ScriptBase
             return await this.PerformRegexReplace().ConfigureAwait(false);
         }else if(this.Context.OperationId == "RegexMatch") {
             return await this.PerformRegexMatch().ConfigureAwait(false);
+        }else if(this.Context.OperationId == "RegexMatches") {
+            return await this.PerformRegexMatches().ConfigureAwait(false);
         }
 
         HttpResponseMessage response = new HttpResponseMessage(HttpStatusCode.BadRequest);
@@ -63,5 +65,28 @@ private async Task<HttpResponseMessage> PerformRegexReplace()
         response.Content = CreateJsonContent(output.ToString());
         return response;
     }
-    
+    private async Task<HttpResponseMessage> PerformRegexMatches()
+    { 
+        // Manipulate the request data as applicable before setting it back
+        var requestContentAsString = await this.Context.Request.Content.ReadAsStringAsync().ConfigureAwait(false);
+        var requestContentAsJson = JObject.Parse(requestContentAsString);
+
+        var input = (string)requestContentAsJson["input"];
+        var pattern = (string)requestContentAsJson["pattern"];
+        
+        MatchCollection matches = Regex.Matches(input, pattern, RegexOptions.Compiled, TimeSpan.FromSeconds(1));
+        string result= "";
+
+        var toarray = from Match match in matches select match.Value;
+        
+        // Manipulate the response data as applicable before returning it
+        JObject output = new JObject
+        {
+            ["output"] = JArray.FromObject(toarray)
+        };
+
+        var response = new HttpResponseMessage(HttpStatusCode.OK);
+        response.Content = CreateJsonContent(output.ToString());
+        return response;
+    }    
 }
